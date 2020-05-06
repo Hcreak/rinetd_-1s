@@ -34,15 +34,18 @@ def shit():
 #############
 @app.route('/logs', methods=['GET'])
 def shit1():
-    l = []
-    with open('/rinetd_+1s/iplog.csv','r') as f: 
-        reader = csv.reader(f)
-        for row in reader:
-            # print row
-            l.append(row)
-    for i in l[1:]:
-        i[4] = i[4].decode('utf-8')
-    return render_template('logs.html', gen_time=l[0][5], itemlist=l[1:])
+    if os.path.exists('/rinetd_+1s/iplog.csv'):
+        l = []
+        with open('/rinetd_+1s/iplog.csv','r') as f: 
+            reader = csv.reader(f)
+            for row in reader:
+                # print row
+                l.append(row)
+        for i in l[1:]:
+            i[4] = i[4].decode('utf-8')
+        return render_template('logs.html', gen_time=l[0][5], itemlist=l[1:])
+    else:
+        return render_template('logs.html', gen_time='NULL', itemlist=[['null','null','null','null','null']])
 
 @app.route('/logs_compute', methods=['POST'])
 def shit2():
