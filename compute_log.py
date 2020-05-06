@@ -4,8 +4,8 @@ import requests
 import time
 import csv
 
-ip_list = []
-datas = {}
+sumlines = 0
+curlines = 0
 
 class ip_data():
     def __init__(self,geo):
@@ -37,41 +37,70 @@ def ipapi(ip):
 
     return apistr
 
-# f = open('/rinetd_+1s/rinetd.log','r')
-f = open('C:/Users/Administrator/Desktop/rinetd_+1s/rinetd.log','r')
-en = f.readlines()
+def main():
+    ip_list = []
+    datas = {}
 
-for line in en[0:7] :
-    part = line.split()
-    if len(part) < 9:
-        continue
-    ip = part[1]
-    upband = part[6]
-    downband = part[7]
-    if ip not in ip_list:
-        ip_list.append(ip)
-        datas[ip] = ip_data(ipapi(ip))
-    datas[ip].add_data(int(upband),int(downband))
+    f = open('/rinetd_+1s/rinetd.log','r')
+    # f = open('C:/Users/Administrator/Desktop/rinetd_+1s/rinetd.log','r')
+    en = f.readlines()
+    global sumlines
+    global curlines
+    sumlines = len(en)
+    curlines = 0
 
-f.close()
+    for line in en:
+        curlines += 1
 
-outdata = sorted(datas.items(), key=lambda item:item[1].count, reverse = True)
+        part = line.split()
+        if len(part) < 9:
+            continue
+        ip = part[1]
+        upband = part[6]
+        downband = part[7]
+        if ip not in ip_list:
+            ip_list.append(ip)
+            datas[ip] = ip_data(ipapi(ip))
+        datas[ip].add_data(int(upband),int(downband))
 
-csvfile = open('ceshi.csv', 'wb')
-writer = csv.writer(csvfile)
-#设置表头
-result = ['IP Address', 'Connect Num', 'Up Bandwidth', 'Down Bandwidth', 'IP Geolocation']
-writer.writerow(result)
+    f.close()
 
-for item in outdata:
-    itemdata = item[1]
-    try:
-        print item[0] + '\t' + str(itemdata.count) + '\t' + str(itemdata.upband) + '\t' + str(itemdata.downband) + '\t' + itemdata.ipgeo
-    except:
-        print item[0] + '\t' + str(itemdata.count) + '\t' + str(itemdata.upband) + '\t' + str(itemdata.downband)
-    
-    #将CsvData中的数据写入到csv文件中
-    CsvData = [item[0], str(itemdata.count), str(itemdata.upband), str(itemdata.downband), itemdata.ipgeo.encode('gbk')]        
-    writer.writerow(CsvData)
+    return sorted(datas.items(), key=lambda item:item[1].count, reverse = True)
 
-csvfile.close()
+def csvout(datas):
+    csvfile = open('/rinetd_+1s/iplog.csv', 'wb')
+    # csvfile = open('iplog.csv', 'wb')
+    csvfile.write(u'\ufeff'.encode('utf-8'))
+    writer = csv.writer(csvfile)
+    #设置表头
+    gen_time = time.asctime( time.localtime(time.time()) ) 
+    result = ['IP Address', 'Connect Num', 'Up Bandwidth', 'Down Bandwidth', 'IP Geolocation', gen_time]
+    writer.writerow(result)
+    for item in datas:
+        itemdata = item[1]
+        #将CsvData中的数据写入到csv文件中
+        try:
+            CsvData = [item[0], str(itemdata.count), str(itemdata.upband), str(itemdata.downband), itemdata.ipgeo.encode('utf-8')]
+        except:
+            CsvData = [item[0], str(itemdata.count), str(itemdata.upband), str(itemdata.downband), item[0]]    
+        writer.writerow(CsvData)
+    csvfile.close()
+
+def printout(datas):
+    for item in datas:
+        itemdata = item[1]
+        try:
+            print item[0] + '\t' + str(itemdata.count) + '\t' + str(itemdata.upband) + '\t' + str(itemdata.downband) + '\t' + itemdata.ipgeo
+        except:
+            print item[0] + '\t' + str(itemdata.count) + '\t' + str(itemdata.upband) + '\t' + str(itemdata.downband)
+
+
+def reportcur():
+    return [curlines, sumlines]
+
+
+
+if __name__ == '__main__':
+    outdata = main()
+    printout(outdata)
+    csvout(outdata)

@@ -3,6 +3,8 @@
 import os
 from flask import *
 import random
+import csv
+import compute_log
 
 app = Flask(__name__)
 
@@ -28,6 +30,38 @@ def shit():
         return '0'
     return '1'
 
+# logs part
+#############
+@app.route('/logs', methods=['GET'])
+def shit1():
+    l = []
+    with open('/rinetd_+1s/iplog.csv','r') as f: 
+        reader = csv.reader(f)
+        for row in reader:
+            # print row
+            l.append(row)
+    for i in l[1:]:
+        i[4] = i[4].decode('utf-8')
+    return render_template('logs.html', gen_time=l[0][5], itemlist=l[1:])
+
+@app.route('/logs_compute', methods=['POST'])
+def shit2():
+    outdata = compute_log.main()
+    compute_log.csvout(outdata)
+    return 'finally'
+
+@app.route('/logs_compute', methods=['GET'])
+def shit3():
+    return jsonify(compute_log.reportcur())
+
+@app.route('/logs_csv', methods=['GET'])
+def shit4():
+    return send_file('iplog.csv', mimetype='text/csv', as_attachment=True, attachment_filename='iplog.csv')
+
+@app.route('/logs_source', methods=['GET'])
+def shit5():
+    return send_file('rinetd.log', mimetype='text/plain', as_attachment=True, attachment_filename='rinetd.log')
+
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0',port=5000,debug=True)
+    app.run(host='0.0.0.0',port=5000,debug=True,threaded=True)
