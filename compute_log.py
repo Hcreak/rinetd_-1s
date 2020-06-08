@@ -4,38 +4,54 @@ import requests
 import time
 import csv
 
+import os
+
 sumlines = 0
 curlines = 0
 
 class ip_data():
-    def __init__(self,geo):
+    def __init__(self):
         self.count = 0
         self.upband = 0
         self.downband = 0
-        self.ipgeo = geo
+        self.ipgeo = ''
     def add_data(self,up,down):
         self.count += 1
         self.upband += up
         self.downband += down
+    def set_geo(self,geo):
+        self.ipgeo = geo
 
 
-def ipapi(ip):
-    r = requests.get('http://ip-api.com/json/{}?lang=zh-CN'.format(ip))
-    try:
-        apijson = r.json()
-        apistr = apijson['country'] + apijson['regionName'] + apijson['city']
-    except:
-        # print r.text
-        apistr = ip
+def ipapi(ipdatas):
+    iplist = ipdatas.keys()
 
-    # ip-api Usage limits
-    try:
-        if r.headers['x-rl'] == '1':
-            time.sleep(int(r.headers['x-ttl']) + 1)
-    except:
-        time.sleep(1)
+    while len(iplist):
+        ip100 = []
+        for i in range(100):
+            if len(iplist) == 0:
+                break
+            ip100.append(iplist.pop())
+        
+        # r = requests.get('http://ip-api.com/json/{}?lang=zh-CN'.format(ip))
+        r = requests.post('http://ip-api.com/batch?lang=zh-CN', json=ip100)
+        try:
+            apijson = r.json()
+            for apiitem in apijson:
+                curip = apiitem['query']
+                apistr = apiitem['country'] + apiitem['regionName'] + apiitem['city']
+                ipdatas[curip].set_geo(apistr)
+        except:
+            # print r.text
+            continue
 
-    return apistr
+        # ip-api Usage limits
+        try:
+            if r.headers['x-rl'] == '1':
+                time.sleep(int(r.headers['x-ttl']) + 1)
+        except:
+            time.sleep(1)
+
 
 def main():
     ip_list = []
@@ -60,10 +76,12 @@ def main():
         downband = part[7]
         if ip not in ip_list:
             ip_list.append(ip)
-            datas[ip] = ip_data(ipapi(ip))
+            datas[ip] = ip_data()
         datas[ip].add_data(int(upband),int(downband))
 
     f.close()
+
+    ipapi(datas)
 
     return sorted(datas.items(), key=lambda item:item[1].count, reverse = True)
 
